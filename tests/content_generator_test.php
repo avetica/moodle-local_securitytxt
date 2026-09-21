@@ -183,4 +183,37 @@ final class content_generator_test extends \advanced_testcase {
         $this->assertStringNotContainsString('Policy:', $content);
         $this->assertSame("Contact: mailto:security@klant.nl\r\nExpires: 2027-09-14T23:59:59Z\r\n", $content);
     }
+
+    /**
+     * A line break inside an optional value can never add a field of its own to the file.
+     *
+     * Not reachable through the settings form, where a single-line input drops the break, but a
+     * value written from the CLI or forced through $CFG->forced_plugin_settings bypasses the form.
+     */
+    public function test_line_breaks_in_optional_fields_cannot_inject_a_field(): void {
+        $this->resetAfterTest();
+
+        set_config('contact', 'mailto:security@klant.nl', 'local_securitytxt');
+        set_config('expires', '2027-09-14', 'local_securitytxt');
+        set_config(
+            'canonical',
+            "https://klant.nl/.well-known/security.txt\r\nContact: mailto:aanvaller@evil.test",
+            'local_securitytxt'
+        );
+
+        $content = content_generator::generate();
+
+        // The injected text survives as part of the Canonical value, which is the admin's own typo to
+        // fix; what must never happen is it becoming a Contact field of its own.
+        $lines = explode(content_generator::EOL, trim($content));
+        $contactlines = array_filter($lines, static fn($line) => str_starts_with($line, 'Contact:'));
+        $this->assertCount(1, $contactlines);
+
+        $this->assertSame(
+            "Contact: mailto:security@klant.nl\r\n"
+            . "Expires: 2027-09-14T23:59:59Z\r\n"
+            . "Canonical: https://klant.nl/.well-known/security.txt Contact: mailto:aanvaller@evil.test\r\n",
+            $content
+        );
+    }
 }

@@ -34,11 +34,14 @@ $settings = new admin_settingpage(
 $ADMIN->add('security', $settings);
 
 if ($ADMIN->fulltree) {
+    // The default is null, not an empty string: admin_apply_default_settings() runs at install and
+    // at upgrade, skips a null default, but would try to save an empty one - which this field's own
+    // validation refuses, producing a debugging notice on every install.
     $settings->add(new local_securitytxt\admin_setting_contact(
         'local_securitytxt/contact',
         new lang_string('setting_contact', 'local_securitytxt'),
         new lang_string('setting_contact_desc', 'local_securitytxt'),
-        '',
+        null,
         PARAM_RAW
     ));
 
@@ -80,5 +83,43 @@ if ($ADMIN->fulltree) {
         new lang_string('setting_policy_desc', 'local_securitytxt'),
         '',
         PARAM_RAW_TRIMMED
+    ));
+
+    // Two fixed test links, not the free-text Canonical setting above: an administrator can put
+    // anything in Canonical (including, as happened during testing, an unrelated URL), so a link
+    // built from it would test whatever they typed rather than what this plugin actually serves.
+    // wellknown.php is this plugin's own script and always works; .well-known/security.txt is the
+    // real RFC 9116 address and only works once the routing from README.md is set up. Laid out as a
+    // table so each explanation sits directly under its own button, not as a shared paragraph that
+    // leaves it ambiguous which sentence belongs to which link.
+    $wellknownurl = new moodle_url('/local/securitytxt/wellknown.php');
+    $dotwellknownurl = new moodle_url('/.well-known/security.txt');
+
+    $table = new html_table();
+    $table->attributes['class'] = 'table table-bordered w-auto mb-4';
+    $table->data[] = [
+        html_writer::link($wellknownurl, get_string('setting_testlink_wellknown', 'local_securitytxt'), [
+            'target' => '_blank',
+            'rel' => 'noopener',
+            'class' => 'btn btn-secondary',
+        ]),
+        html_writer::link($dotwellknownurl, get_string('setting_testlink_dotwellknown', 'local_securitytxt'), [
+            'target' => '_blank',
+            'rel' => 'noopener',
+            'class' => 'btn btn-secondary',
+        ]),
+    ];
+    $table->data[] = [
+        get_string('setting_testlink_wellknown_desc', 'local_securitytxt'),
+        get_string('setting_testlink_dotwellknown_desc', 'local_securitytxt'),
+    ];
+
+    $testinfo = html_writer::tag('p', get_string('setting_testlink_desc', 'local_securitytxt'));
+    $testinfo .= html_writer::table($table);
+
+    $settings->add(new admin_setting_heading(
+        'local_securitytxt/testlink',
+        new lang_string('setting_testlink', 'local_securitytxt'),
+        $testinfo
     ));
 }

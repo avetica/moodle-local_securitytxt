@@ -40,9 +40,9 @@ class admin_setting_expires extends \admin_setting_configtext {
      * @param string $name Setting name, e.g. local_securitytxt/expires.
      * @param string $visiblename Localised label.
      * @param string $description Localised help text.
-     * @param string $defaultsetting Default value.
+     * @param string|null $defaultsetting Default value. Null by design, see settings.php.
      */
-    public function __construct($name, $visiblename, $description, $defaultsetting = '') {
+    public function __construct($name, $visiblename, $description, $defaultsetting = null) {
         parent::__construct($name, $visiblename, $description, $defaultsetting, PARAM_RAW_TRIMMED, 12);
     }
 

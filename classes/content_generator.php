@@ -62,7 +62,12 @@ class content_generator {
         $lines[] = 'Expires: ' . self::format_expires($expires);
 
         foreach (self::OPTIONAL_FIELDS as $setting => $field) {
-            $value = trim((string) get_config('local_securitytxt', $setting));
+            // A line break inside one of these values would add a whole extra field to the file, so
+            // it is collapsed to a space here rather than in the form: a single-line input already
+            // strips one, but a value set from CLI or $CFG->forced_plugin_settings never passes
+            // through the form at all. A space keeps the damage visible instead of silently gluing
+            // two values into one that still looks valid.
+            $value = trim(preg_replace('/\R+/', ' ', (string) get_config('local_securitytxt', $setting)));
             if ($value !== '') {
                 $lines[] = $field . ': ' . $value;
             }
