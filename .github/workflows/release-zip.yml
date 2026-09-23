@@ -1,0 +1,58 @@
+# Builds an installable Moodle plugin ZIP for every version tag (vX.Y.Z) and attaches it to a GitHub release.
+# Can also be run by hand for an existing tag (Actions > Release ZIP > Run workflow).
+
+name: Release ZIP
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build a release ZIP for, e.g. v1.0.1'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release-zip:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Build and verify ZIP
+        run: |
+          set -eu
+          # The plugin lives in the repo root or in a subfolder: take the shallowest version.php that declares a component.
+          versionphp=$(git ls-files -- '*version.php' | grep -Ev '(^|/)(tests|vendor|node_modules|context)/' \
+            | while read -r f; do grep -q '\$plugin->component' "$f" && echo "$f"; done \
+            | awk '{ print gsub("/", "/"), $0 }' | sort -n | head -n 1 | cut -d' ' -f2-)
+          [ -n "$versionphp" ] || { echo "No version.php declaring \$plugin->component found"; exit 1; }
+          component=$(sed -n "s/.*\$plugin->component *= *'\([a-z0-9_]*\)'.*/\1/p" "$versionphp")
+          release=$(sed -n "s/.*\$plugin->release *= *'\([^']*\)'.*/\1/p" "$versionphp")
+          name=${component#*_}
+          plugindir=$(dirname "$versionphp")
+          if [ "$plugindir" = "." ]; then tree=HEAD; else tree="HEAD:$plugindir"; fi
+          [ "$TAG" = "v$release" ] || { echo "Tag $TAG does not match \$plugin->release '$release' in $versionphp"; exit 1; }
+
+          # Moodle expects exactly one root folder named after the plugin without its type (securitytxt/, not local_securitytxt/).
+          zipfile="$component-$release.zip"
+          git archive --format=zip --prefix="$name/" -o "$zipfile" "$tree"
+          unzip -Z1 "$zipfile" | grep -qx "$name/version.php" || { echo "$name/version.php missing from ZIP"; exit 1; }
+          if unzip -Z1 "$zipfile" | grep -v "^$name/" | grep -q .; then echo "ZIP contains files outside $name/"; exit 1; fi
+          echo "ZIPFILE=$zipfile" >> "$GITHUB_ENV"
+          echo "TITLE=$component $release" >> "$GITHUB_ENV"
+
+      - name: Create or update the GitHub release
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIPFILE" --clobber
+          else
+            gh release create "$TAG" "$ZIPFILE" --title "$TITLE" --notes "Installable Moodle plugin ZIP: download the asset below."
+          fi
