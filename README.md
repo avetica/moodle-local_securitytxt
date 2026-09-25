@@ -34,12 +34,24 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
   rewrite ^/.well-known/security.txt$ /local/securitytxt/wellknown.php last;
 ```
 
-**Apache (.htaccess or vhost):**
+**Apache, in `.htaccess` or a `<Directory>` block:**
 
 ```apache
 RewriteEngine On
 RewriteRule ^\.well-known/security\.txt$ /local/securitytxt/wellknown.php [L]
 ```
+
+**Apache, directly in the `<VirtualHost>`:**
+
+```apache
+RewriteEngine On
+RewriteRule ^/\.well-known/security\.txt$ /local/securitytxt/wellknown.php [L]
+```
+
+The leading slash is the only difference, and it matters: in a `<VirtualHost>` the rule is matched
+against the path including its leading `/`, in `.htaccess` and `<Directory>` without it. The
+`.htaccess` form placed in a `<VirtualHost>` never matches, so the well-known address keeps returning
+404. `mod_rewrite` must be enabled either way (`a2enmod rewrite` on Debian and Ubuntu).
 
 **Nginx (server block):**
 
