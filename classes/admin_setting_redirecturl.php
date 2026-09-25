@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Admin setting for the mandatory RFC 9116 Contact field.
+ * Admin setting for the address of an existing security.txt that visitors are forwarded to.
  *
  * @package     local_securitytxt
  * @copyright   2026 Avetica
@@ -25,48 +25,41 @@
 namespace local_securitytxt;
 
 /**
- * A required multi-line field holding one contact method per line.
- *
- * The URI format itself is deliberately not validated (see specs.md); only the presence of at least
- * one non-blank line is enforced.
+ * An https URL that is required only in redirect mode.
  *
  * @copyright   2026 Avetica
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class admin_setting_contact extends \admin_setting_configtextarea {
+class admin_setting_redirecturl extends \admin_setting_configtext {
     /**
-     * Reject a value that holds no contact method at all.
+     * Constructor.
+     *
+     * @param string $name Setting name, e.g. local_securitytxt/redirecturl.
+     * @param string $visiblename Localised label.
+     * @param string $description Localised help text.
+     */
+    public function __construct($name, $visiblename, $description) {
+        parent::__construct($name, $visiblename, $description, '', PARAM_RAW_TRIMMED, 60);
+    }
+
+    /**
+     * Reject a missing, non-https or self-referencing URL while redirect mode is selected.
      *
      * @param string $data The submitted value.
      * @return bool|string True when valid, otherwise the localised error message.
      */
     public function validate($data) {
-        // In redirect mode this field is hidden and not served, so it cannot be required. The mode
-        // chosen in this same save counts, not the stored one (see admin_setting_mode::chosen()).
-        if (admin_setting_mode::chosen() === content_generator::MODE_REDIRECT) {
+        // In fields mode this field is hidden and unused. The mode chosen in this same save counts,
+        // not the stored one: a refused switch to redirect mode must still say what is wrong here.
+        if (admin_setting_mode::chosen() !== content_generator::MODE_REDIRECT) {
             return true;
         }
 
-        $error = self::check((string) $data);
+        $error = content_generator::check_redirect_url(trim((string) $data));
         if ($error !== null) {
             return get_string($error, 'local_securitytxt');
         }
 
-        return parent::validate($data);
-    }
-
-    /**
-     * The rules a Contact value must meet in fields mode, also used when switching back to that mode.
-     *
-     * @param string $data The candidate value.
-     * @return string|null Null when valid, otherwise the language string identifier of the error.
-     */
-    public static function check(string $data): ?string {
-        // Test scenario 3.1b: whitespace only is the same as empty.
-        if (trim($data) === '') {
-            return 'error_contactrequired';
-        }
-
-        return null;
+        return true;
     }
 }

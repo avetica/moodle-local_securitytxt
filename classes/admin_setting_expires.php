@@ -53,26 +53,48 @@ class admin_setting_expires extends \admin_setting_configtext {
      * @return bool|string True when valid, otherwise the localised error message.
      */
     public function validate($data) {
-        $data = trim((string) $data);
+        // In redirect mode this field is hidden and not served. A date left over from before the
+        // switch may since have passed, and that must not block saving the redirect. The mode chosen
+        // in this same save counts, not the stored one (see admin_setting_mode::chosen()).
+        if (admin_setting_mode::chosen() === content_generator::MODE_REDIRECT) {
+            return true;
+        }
+
+        $error = self::check((string) $data);
+        if ($error !== null) {
+            return get_string($error, 'local_securitytxt');
+        }
+
+        return true;
+    }
+
+    /**
+     * The rules an Expires date must meet in fields mode, also used when switching back to that mode.
+     *
+     * @param string $data The candidate date.
+     * @return string|null Null when valid, otherwise the language string identifier of the error.
+     */
+    public static function check(string $data): ?string {
+        $data = trim($data);
 
         if ($data === '') {
-            return get_string('error_expiresrequired', 'local_securitytxt');
+            return 'error_expiresrequired';
         }
 
         if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $data, $matches)) {
-            return get_string('error_expiresformat', 'local_securitytxt');
+            return 'error_expiresformat';
         }
 
         if (!checkdate((int) $matches[2], (int) $matches[3], (int) $matches[1])) {
-            return get_string('error_expiresformat', 'local_securitytxt');
+            return 'error_expiresformat';
         }
 
         // The date counts until the end of that day in UTC, matching what content_generator serves.
         if (strtotime($data . ' 23:59:59 UTC') <= time()) {
-            return get_string('error_expirespast', 'local_securitytxt');
+            return 'error_expirespast';
         }
 
-        return true;
+        return null;
     }
 
     /**

@@ -4,10 +4,12 @@ A Moodle local plugin that lets a site administrator publish an [RFC 9116](https
 
 ## What it does
 
-- Adds a settings page under **Site administration > Security > Security.txt** with the RFC 9116 fields: Contact, Expires, Encryption, Preferred-Languages, Canonical and Policy.
+- Adds a settings page under **Site administration > Security > Security.txt**. The administrator first chooses how the file is published:
+  - **Fill in the fields below**: the file is built from the RFC 9116 fields Contact, Expires, Encryption, Preferred-Languages, Canonical and Policy.
+  - **Redirect to an existing security.txt**: for organisations that already publish a (centrally managed or digitally signed) `security.txt` elsewhere. Visitors are forwarded there with an HTTP 302, so the file reaches them byte for byte unchanged and a signature stays valid. The fields are hidden and not served.
 - Serves the file as plain text from `/local/securitytxt/wellknown.php`, publicly and without a Moodle session.
-- Refuses to save an empty Contact or an expiry date in the past, so the published file is never invalid.
-- Warns every site administrator through a Moodle notification 30 days before the `Expires` date, and again once it has passed.
+- Refuses to save an empty Contact or an expiry date in the past, so the published file is never invalid. In redirect mode it instead requires an https address that does not point back at this site.
+- In fields mode, warns every site administrator through a Moodle notification 30 days before the `Expires` date, and again once it has passed.
 
 Only users holding `local/securitytxt:manage` (by default the Manager role) can edit the settings. The public endpoint has no capability check, because researchers reach it anonymously.
 
@@ -15,9 +17,11 @@ Only users holding `local/securitytxt:manage` (by default the Manager role) can 
 
 1. Copy the plugin into `local/securitytxt` in your Moodle directory.
 2. Visit **Site administration > Notifications** and complete the upgrade.
-3. Fill in at least Contact and Expires under **Site administration > Security > Security.txt**.
+3. Under **Site administration > Security > Security.txt**, either fill in at least Contact and Expires, or choose the redirect and enter the address of your existing file.
 
-Until Contact and Expires are both filled in, the endpoint returns HTTP 404: no half-configured file is ever published.
+Until Contact and Expires are both filled in (or, in redirect mode, a valid address), the endpoint returns HTTP 404: no half-configured file is ever published.
+
+In redirect mode, also list this site's address (`https://<your-moodle>/.well-known/security.txt`) in the `Canonical` field of the file you redirect to. RFC 9116 section 2.5.2 tells researchers not to trust a file retrieved from an address that is not listed there.
 
 ## Required: routing /.well-known/security.txt
 
@@ -51,7 +55,7 @@ Put the annotation or rewrite in the Helm chart or manifest that is kept in Git,
 
 ## Caching
 
-A configured file is served with `Cache-Control: public, max-age=3600`, so scanners and proxies do not hit the site repeatedly but still pick up a change within the hour. Before the first configuration the 404 is served with `Cache-Control: no-cache`, so no proxy keeps serving "not configured" after the administrator fills the fields in.
+A configured file, and in redirect mode the redirect itself, is served with `Cache-Control: public, max-age=3600`, so scanners and proxies do not hit the site repeatedly but still pick up a change within the hour. Before the first configuration the 404 is served with `Cache-Control: no-cache`, so no proxy keeps serving "not configured" after the administrator fills the fields in.
 
 ## Notes
 

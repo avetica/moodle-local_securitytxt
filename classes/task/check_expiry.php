@@ -47,6 +47,11 @@ class check_expiry extends \core\task\scheduled_task {
      * Send the expiry notification that is due, if any.
      */
     public function execute(): void {
+        // In redirect mode the organisation maintains Expires in its own file, not here.
+        if (\local_securitytxt\content_generator::is_redirect_mode()) {
+            return;
+        }
+
         $expires = trim((string) get_config('local_securitytxt', 'expires'));
         if ($expires === '') {
             return;

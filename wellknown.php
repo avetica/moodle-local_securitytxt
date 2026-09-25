@@ -30,7 +30,22 @@ define('NO_MOODLE_COOKIES', true);
 
 require(__DIR__ . '/../../config.php');
 
-$content = \local_securitytxt\content_generator::generate();
+if (\local_securitytxt\content_generator::is_redirect_mode()) {
+    // The organisation publishes its own (often signed) security.txt elsewhere. Forwarding keeps it
+    // byte for byte intact, which rebuilding it here never could. Without a usable URL nothing is
+    // served, not the fields left over from before the switch: those are no longer maintained.
+    $content = null;
+    $redirecturl = \local_securitytxt\content_generator::get_redirect_url();
+    if ($redirecturl !== null) {
+        // A temporary redirect, so browsers and proxies do not remember it forever if the
+        // organisation's address ever changes.
+        header('Cache-Control: public, max-age=3600');
+        header('Location: ' . $redirecturl, true, 302);
+        exit;
+    }
+} else {
+    $content = \local_securitytxt\content_generator::generate();
+}
 
 header('Content-Type: text/plain; charset=utf-8');
 

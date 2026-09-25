@@ -2,6 +2,33 @@
 
 All notable changes to `local_securitytxt` are documented here.
 
+## 1.1.1 - 2026-09-25
+
+### Fixed
+
+- Switching between the two publication methods is now checked as a whole. Choosing "Redirect"
+  with an empty, non-https or self-referencing address used to store the mode anyway, which took the
+  public `security.txt` offline (HTTP 404) until the address was corrected. The mode now only
+  changes when the settings the new mode needs are valid in the same save; otherwise the current
+  `security.txt` stays online and the page says why. The same applies when switching back to the
+  fields with Contact or Expires still empty.
+- The check against redirecting to this site's own `security.txt` compared addresses as text, so
+  `https://site:443/.well-known/security.txt`, an encoded character in the path or extra path after
+  the plugin script slipped through and caused a redirect loop. Addresses are now compared as
+  normalised host, port and path, both when saving and when serving, so an own address set from the
+  command line or `$CFG->forced_plugin_settings` is not used either.
+
+## 1.1.0 - 2026-09-24
+
+### Added
+
+- A choice at the top of the settings page between filling in the fields and redirecting to a
+  `security.txt` the organisation already publishes elsewhere, for example a centrally managed or
+  digitally signed file. In redirect mode the endpoint answers with an HTTP 302 to that address, so
+  the file reaches the visitor unchanged; the fields are hidden, not required and not served, and the
+  expiry notification is skipped because the organisation maintains Expires in its own file. Stored
+  field values are kept, so switching back needs no retyping. Existing sites keep the fields mode.
+
 ## 1.0.1 - 2026-09-21
 
 Independently reviewed and functionally tested; no open findings.

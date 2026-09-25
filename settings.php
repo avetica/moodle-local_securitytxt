@@ -34,6 +34,26 @@ $settings = new admin_settingpage(
 $ADMIN->add('security', $settings);
 
 if ($ADMIN->fulltree) {
+    // The choice comes first on the page, so the fields below read as depending on it. The mode only
+    // changes when the fields the new mode needs are valid in the same save (admin_setting_mode).
+    $settings->add(new local_securitytxt\admin_setting_mode(
+        'local_securitytxt/mode',
+        new lang_string('setting_mode', 'local_securitytxt'),
+        new lang_string('setting_mode_desc', 'local_securitytxt')
+    ));
+
+    $settings->add(new local_securitytxt\admin_setting_redirecturl(
+        'local_securitytxt/redirecturl',
+        new lang_string('setting_redirecturl', 'local_securitytxt'),
+        new lang_string('setting_redirecturl_desc', 'local_securitytxt', $CFG->wwwroot . '/.well-known/security.txt')
+    ));
+    $settings->hide_if(
+        'local_securitytxt/redirecturl',
+        'local_securitytxt/mode',
+        'neq',
+        local_securitytxt\content_generator::MODE_REDIRECT
+    );
+
     // The default is null, not an empty string: admin_apply_default_settings() runs at install and
     // at upgrade, skips a null default, but would try to save an empty one - which this field's own
     // validation refuses, producing a debugging notice on every install.
@@ -84,6 +104,17 @@ if ($ADMIN->fulltree) {
         '',
         PARAM_RAW_TRIMMED
     ));
+
+    // In redirect mode the organisation's own file is served, so none of these fields apply. Their
+    // values are kept, so switching back does not mean typing everything in again.
+    foreach (['contact', 'expires', 'encryption', 'preferredlanguages', 'canonical', 'policy'] as $field) {
+        $settings->hide_if(
+            'local_securitytxt/' . $field,
+            'local_securitytxt/mode',
+            'eq',
+            local_securitytxt\content_generator::MODE_REDIRECT
+        );
+    }
 
     // Two fixed test links, not the free-text Canonical setting above: an administrator can put
     // anything in Canonical (including, as happened during testing, an unrelated URL), so a link
