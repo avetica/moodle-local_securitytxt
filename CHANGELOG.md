@@ -2,6 +2,17 @@
 
 All notable changes to `local_securitytxt` are documented here.
 
+## 1.1.2 - 2026-09-25
+
+Documentation only; the plugin code is unchanged from 1.1.1.
+
+### Fixed
+
+- The Apache rewrite rule in the README was offered for ".htaccess or vhost", but placed directly in
+  a `<VirtualHost>` it never matched, because there the path includes its leading slash, so
+  `/.well-known/security.txt` kept returning 404. The README now gives the `.htaccess`/`<Directory>`
+  form and the `<VirtualHost>` form separately, and notes that `mod_rewrite` must be enabled.
+
 ## 1.1.1 - 2026-09-25
 
 ### Fixed

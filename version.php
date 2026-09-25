@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_securitytxt';
-$plugin->version   = 2026092500;
-$plugin->release   = '1.1.1';
+$plugin->version   = 2026092501;
+$plugin->release   = '1.1.2';
 $plugin->requires  = 2024100700; // Moodle 4.5.0 LTS.
 $plugin->supported = [405, 502]; // Moodle 4.5 LTS through 5.2.
 $plugin->maturity  = MATURITY_STABLE;
