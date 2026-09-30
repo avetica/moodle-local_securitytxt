@@ -23,6 +23,10 @@ Until Contact and Expires are both filled in (or, in redirect mode, a valid addr
 
 In redirect mode, also list this site's address (`https://<your-moodle>/.well-known/security.txt`) in the `Canonical` field of the file you redirect to. RFC 9116 section 2.5.2 tells researchers not to trust a file retrieved from an address that is not listed there.
 
+## Documentation
+
+A task-based guide for the site administrator (publishing, forwarding, checking the result, extending the expiry date) is in [docs/administrator-guide.md](docs/administrator-guide.md).
+
 ## Required: routing /.well-known/security.txt
 
 RFC 9116 requires the file at `https://<yoursite>/.well-known/security.txt`. **This plugin does not set up that route** - it only serves the content at `/local/securitytxt/wellknown.php`. Your technical administrator has to point the well-known path at that script.
@@ -80,6 +84,25 @@ A configured file, and in redirect mode the redirect itself, is served with `Cac
 - Routing to `/.well-known/security.txt` (see above).
 - PGP cleartext signing of the file, which RFC 9116 recommends but does not require.
 - The optional `Acknowledgments` and `Hiring` fields.
+
+## For support
+
+Notes for colleagues answering support questions about this plugin.
+
+**"/.well-known/security.txt gives 404, but the settings are filled in."** Check in this order:
+1. Open `/local/securitytxt/wellknown.php`. If that shows the file, the plugin works and the route is missing or wrong. If that also gives 404, Contact or Expires is empty (or, when forwarding, the address is not saved).
+2. The route lives in the web server or ingress, not in the plugin. After a redeploy or a GitOps reconcile a hand-applied ingress annotation is removed. The fix is to put the rule in the Helm chart or manifest in Git (see above).
+3. On Apache, a rule copied from `.htaccess` into a `<VirtualHost>` never matches because of the leading slash, and `mod_rewrite` must be enabled. Use the form that belongs to the place the rule is in.
+
+**"The file still shows the old expiry date."** The response is cached for one hour (`Cache-Control: public, max-age=3600`); a proxy or scanner may hold it for that long.
+
+**"I switched to redirect and the page would not save."** The mode only changes when the address is a valid https address that does not point at this site. The page shows which condition failed, and the current file stays online.
+
+**"No expiry notification arrived."** Notifications go to users in `$CFG->siteadmins`, once 30 days before `Expires` and once after it has passed, and start over when the date is changed. In redirect mode they are not sent. They arrive as a Moodle notification; email is off by default and is switched on per user in the notification preferences. The check runs as a daily scheduled task ("Check the Security.txt expiry date"), so cron must be running.
+
+**"Who can change the settings?"** Users with `local/securitytxt:manage` (Manager role by default). The public endpoint has no capability check, because researchers reach it anonymously.
+
+**Where is the configuration?** **Site administration > Security > Security.txt**. The values are stored as plugin settings in the database and survive a redeploy.
 
 ## Licence
 
