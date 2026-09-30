@@ -2,6 +2,17 @@
 
 All notable changes to `local_securitytxt` are documented here.
 
+## 1.1.3 - 2026-09-30
+
+Documentation only; the plugin code is unchanged from 1.1.2.
+
+### Added
+
+- An administrator guide (`docs/administrator-guide.md`) with the tasks for publishing a security.txt,
+  forwarding to an existing one, checking the result and extending the expiry date.
+- A support section in the README with the common causes of a 404, a stale cache, a rejected mode
+  switch and missing expiry notifications.
+
 ## 1.1.2 - 2026-09-25
 
 Documentation only; the plugin code is unchanged from 1.1.1.
